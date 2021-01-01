@@ -62,6 +62,7 @@ class kelolaBarang(Barang):
     def tambahdata(self):
         connection.execute(
             f"insert into barang (barcode,nama_barang,stok,harga_jual,harga_beli,tanggal_pembayaran) values('{self.barcode}','{self.nama_barang}','{self.stok}','{self.harga_jual}','{self.harga_beli}','{self.tanggal_pembayaran}')")
+        connection.commit()
 
     @staticmethod
     def LihatDataByBarcode(Barcode):
@@ -98,6 +99,7 @@ class kelolaBarang(Barang):
         total_stok = in_stok + int(stok_baru)
         connection.execute(
             f"UPDATE BARANG SET stok={total_stok} where barcode = '{Barcode}'")
+        connection.commit()
         for data in connection.execute(f"select stok from barang where barcode = '{Barcode}'"):
             print(data)
 
@@ -110,7 +112,21 @@ class Transaksi:
             print(data)
 
     @staticmethod
-    def submittransaksi():
+    def TampilkanRiwayatTransaksi(id_pesanan):
+        print("id_pesanan | tanggal | kasir | Barcode | Nama Barang | Jumlah | Subtotal")
+        for data in connection.execute(f"select detail_pesanan.id_pesanan,pesanan.tanggal,akun.nama as kasir,detail_pesanan.barcode,barang.nama_barang,detail_pesanan.qty,detail_pesanan.sub_total from detail_pesanan inner join pesanan on pesanan.id_pesanan=detail_pesanan.id_pesanan inner join barang on detaiL_pesanan.barcode = barang.barcode inner join akun on akun.username=pesanan.username where detail_pesanan.id_pesanan = {id_pesanan}"):
+            print(data)
+        for data in connection.execute(f"select sum(sub_total) from detail_pesanan where id_pesanan={id_pesanan}"):
+            total = data[0]
+        for data in connection.execute(f"select pembayaran,kembalian from pesanan where id_pesanan ={id_pesanan}"):
+            pembayaran = data[0]
+            kembalian = data[1]
+        print("Total : ", total)
+        print("Pembayaran : ", pembayaran)
+        print("Kembalian : ", kembalian)
+
+    @staticmethod
+    def submittransaksi(id_pesanan):
         for data in connection.execute(f"select max(id_pesanan) from pesanan"):
             id_pesanan = data[0]
         for data in connection.execute(f"select sum(sub_total) as total from detail_pesanan where id_pesanan = {id_pesanan}"):
@@ -119,6 +135,9 @@ class Transaksi:
         pembayaran = int(input("uang tunai : "))
         kembalian = pembayaran - total
         print("kembalian = {}".format(kembalian))
+        connection.execute(
+            f"UPDATE pesanan set pembayaran = {pembayaran}, kembalian={kembalian} where id_pesanan={id_pesanan}")
+        connection.commit()
 
     @staticmethod
     def tambahTransksi(barcode, qty):
@@ -129,14 +148,21 @@ class Transaksi:
             print("harga ", harga)
         for data in connection.execute(f"select harga_jual * {qty} as subtotal from barang where barcode ='{barcode}'"):
             subtotal = data[0]
-        connection.execute(
-            f"insert into detail_pesanan (id_pesanan,barcode,qty,sub_total) values ('{id_pesanan}', '{barcode}','{qty}','{subtotal}')")
-        Transaksi.lihattransaksi(id_pesanan)
+        for data in connection.execute(f"select stok from barang where barcode='{barcode}'"):
+            stokSementara = data[0]
+        if stokSementara <= 0:
+            print("stok Habis")
+        else:
+            connection.execute(
+                f"insert into detail_pesanan (id_pesanan,barcode,qty,sub_total) values ('{id_pesanan}', '{barcode}','{qty}','{subtotal}')")
+            connection.commit()
+            Transaksi.lihattransaksi(id_pesanan)
 
     @staticmethod
     def buatTransaksi(username):
         connection.execute(
             f"insert into pesanan(username,tanggal,pembayaran,kembalian) values ('{username}',datetime('now'),0,0)")
+        connection.commit()
 
 
 while True:
@@ -176,10 +202,10 @@ while True:
                             break
                         else:
                             Transaksi.tambahTransksi(BarcodeBarang, qty)
-                    Transaksi.submittransaksi()
                     for data in connection.execute("select max(id_pesanan) as id_pesanan from detail_pesanan"):
                         id_pesanan = data[0]
-                    Transaksi.lihattransaksi(id_pesanan)
+                    Transaksi.submittransaksi(id_pesanan)
+                    Transaksi.TampilkanRiwayatTransaksi(id_pesanan)
                     pilihan2 = input("Tambah Transaksi (y/n) ? ")
                     if pilihan2 == "n":
                         break
@@ -232,6 +258,7 @@ while True:
                         break
 
             elif pilihan == "3":
-                print("lihat riwayat transaksi")
+                id_pesanan = int(input("Id Pesanan : "))
+                Transaksi.TampilkanRiwayatTransaksi(id_pesanan)
             elif pilihan == "4":
                 break
