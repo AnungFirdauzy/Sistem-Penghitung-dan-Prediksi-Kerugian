@@ -6,13 +6,13 @@ connection = sqlite3.connect("C:/sqlite/cashier.db")
 
 class Login:
     def __init__(self, raw_username, raw_password):
-        self.__raw_username = raw_username
+        self._raw_username = raw_username
         self.__raw_password = raw_password
         self.akses = 0
 
     def cekAkun(self):
         for akun in connection.execute("select * from akun"):
-            if akun[0] == self.__raw_username:
+            if akun[0] == self._raw_username:
                 if akun[1] == self.__raw_password:
                     self.akses = 1
                     break
@@ -102,6 +102,43 @@ class kelolaBarang(Barang):
             print(data)
 
 
+class Transaksi:
+
+    @staticmethod
+    def lihattransaksi(id_pesanan):
+        for data in connection.execute(f"select * from detail_pesanan where id_pesanan = '{id_pesanan}'"):
+            print(data)
+
+    @staticmethod
+    def submittransaksi():
+        for data in connection.execute(f"select max(id_pesanan) from pesanan"):
+            id_pesanan = data[0]
+        for data in connection.execute(f"select sum(sub_total) as total from detail_pesanan where id_pesanan = {id_pesanan}"):
+            total = data[0]
+        print(f"Total Biaya = {total}")
+        pembayaran = int(input("uang tunai : "))
+        kembalian = pembayaran - total
+        print("kembalian = {}".format(kembalian))
+
+    @staticmethod
+    def tambahTransksi(barcode, qty):
+        for data in connection.execute(f"select max(id_pesanan) from pesanan"):
+            id_pesanan = data[0]
+        for data in connection.execute(f"select harga_jual from barang where barcode='{barcode}'"):
+            harga = data[0]
+            print("harga ", harga)
+        for data in connection.execute(f"select harga_jual * {qty} as subtotal from barang where barcode ='{barcode}'"):
+            subtotal = data[0]
+        connection.execute(
+            f"insert into detail_pesanan (id_pesanan,barcode,qty,sub_total) values ('{id_pesanan}', '{barcode}','{qty}','{subtotal}')")
+        Transaksi.lihattransaksi(id_pesanan)
+
+    @staticmethod
+    def buatTransaksi(username):
+        connection.execute(
+            f"insert into pesanan(username,tanggal,pembayaran,kembalian) values ('{username}',datetime('now'),0,0)")
+
+
 while True:
     print("""
 
@@ -129,10 +166,23 @@ while True:
             pilihan = input("Input Pilihan : ")
 
             if pilihan == "1":
-                print("input transaksi")
                 while True:
-                    BarcodeBarang = input("Input Barcode Barang : ")
-                    qty = input("Jumlah : ")
+                    Transaksi.buatTransaksi(raw_username)
+                    while True:
+                        print("___ ketik 'submit' untuk meyimpan ___")
+                        BarcodeBarang = input("Input Barcode Barang : ")
+                        qty = input("Jumlah : ")
+                        if BarcodeBarang == "submit":
+                            break
+                        else:
+                            Transaksi.tambahTransksi(BarcodeBarang, qty)
+                    Transaksi.submittransaksi()
+                    for data in connection.execute("select max(id_pesanan) as id_pesanan from detail_pesanan"):
+                        id_pesanan = data[0]
+                    Transaksi.lihattransaksi(id_pesanan)
+                    pilihan2 = input("Tambah Transaksi (y/n) ? ")
+                    if pilihan2 == "n":
+                        break
 
             elif pilihan == "2":
                 while True:
