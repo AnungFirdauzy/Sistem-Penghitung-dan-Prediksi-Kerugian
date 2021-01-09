@@ -241,11 +241,40 @@ class Transaksi:
         connection.commit()
 
     @staticmethod
-    def getrugi():
-        for data in connection.execute("select * from barang where tanggal_pembayaran > date('now')"):
+    def getrugi(tgl_input):
+        for data in connection.execute(f"select * from barang where tanggal_pembayaran between  date('now') and '{tgl_input}'"):
             kerugian = data[2]*data[4]
             print(f"""
             Barcode : {data[0]} | Produk : {data[1]} | Stok : {data[2]} | Harga Jual : {data[3]} | Harga Beli : {data[4]} | Tanggal Pembayaran : {data[5]} | Perkiraan Kerugian : {kerugian}""")
+
+    @staticmethod
+    def getMean(barcode):
+        qty = 0
+        Banyak_Transaksi = 0
+        for data in connection.execute(f"select detail_pesanan.barcode, detail_pesanan.qty, pesanan.tanggal from detail_pesanan inner join pesanan on pesanan.id_pesanan = detail_pesanan.id_pesanan where barcode = '{barcode}' and tanggal >= date('now') "):
+            qty = qty + data[1]
+            Banyak_Transaksi += 1
+        print(f"""
+        Total Terjual {qty} 
+        Rata- Rata Pejualan {qty/Banyak_Transaksi} dari {Banyak_Transaksi} Transaksi
+        """)
+
+    @staticmethod
+    def getBarangTerjual():
+        for data in connection.execute("select detail_pesanan.barcode, count(barcode) as jumlah, pesanan.tanggal from detail_pesanan inner join pesanan on pesanan.id_pesanan=detail_pesanan.id_pesanan where pesanan.tanggal >= date('now') group by barcode order by jumlah asc;"):
+            print(f"""
+            Barcode : {data[0]}  |  Jumlah : {data[1]} | 
+            """)
+        for data in connection.execute("select detail_pesanan.barcode, count(barcode) as jumlah, pesanan.tanggal from detail_pesanan inner join pesanan on pesanan.id_pesanan=detail_pesanan.id_pesanan where pesanan.tanggal >= date('now') group by barcode order by jumlah desc;"):
+            barcode_max = data[0]
+            jumlah_max = data[1]
+            break
+        for data in connection.execute(f"select nama_barang from barang where barcode = '{barcode_max}'"):
+            nama_barang = data[0]
+        print(f"""
+            Barang Paling Laku : {nama_barang}
+            Barcode : {barcode_max}
+            dengan Jumlah terjual : {jumlah_max}""")
 
 
 while True:
@@ -408,11 +437,13 @@ while True:
                 ----- Selamat Datang {} -----
                 1. Lihat Transaksi
                 2. Lihat Barang
-                3. Cek Kerugian Per Barang
-                4. Logout
+                3. Rata-Rata Penjualan Barang Hari ini
+                4. Barang Paling Laku Hari ini
+                5. Cek Kerugian
+                6. Logout
                 """.format(nama))
                 pilihan = input("Input Pilihan : ")
-                if pilihan == "4":
+                if pilihan == "6":
                     break
 
                 elif pilihan == "1":
@@ -429,4 +460,13 @@ while True:
                     kelolaBarang.LihatSemuaBarang()
 
                 elif pilihan == "3":
-                    Transaksi.getrugi()
+                    barcode = input("Barcode : ")
+                    Transaksi.getMean(barcode)
+
+                elif pilihan == "5":
+                    print("___ Prediksi Kerugian Yang Akan Datang ___")
+                    tgl_input = input('Tanggal (YYYY-MM-DD) : ')
+                    Transaksi.getrugi(tgl_input)
+
+                elif pilihan == "4":
+                    Transaksi.getBarangTerjual()
