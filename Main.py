@@ -1,7 +1,7 @@
 import sqlite3
 from getpass import getpass
 
-connection = sqlite3.connect("C:/sqlite/kasir.db")
+connection = sqlite3.connect("C:/sqlite/kasir_edit.db")
 
 
 class Login:
@@ -69,13 +69,14 @@ class kelolaAkun(Login):
 
 
 class Barang:
-    def __init__(self, barcode, nama_barang, stok, harga_jual, harga_beli, tanggal_pembayaran):
+    def __init__(self, barcode, nama_barang, stok, harga_jual, harga_beli, tanggal_pembayaran, tanggal_kadaluarsa):
         self.barcode = barcode
         self.nama_barang = nama_barang
         self.stok = stok
         self.harga_jual = harga_jual
         self.harga_beli = harga_beli
         self.tanggal_pembayaran = tanggal_pembayaran
+        self.tanggal_kadaluarsa = tanggal_kadaluarsa
 
     def getNama(self):
         return self.nama_barang
@@ -97,13 +98,13 @@ class Barang:
 
 
 class kelolaBarang(Barang):
-    def __init__(self, barcode, nama_barang, stok, harga_jual, harga_beli, tanggal_pembayaran):
+    def __init__(self, barcode, nama_barang, stok, harga_jual, harga_beli, tanggal_pembayaran, tanggal_kadaluarsa):
         super().__init__(barcode, nama_barang, stok,
-                         harga_jual, harga_beli, tanggal_pembayaran)
+                         harga_jual, harga_beli, tanggal_pembayaran, tanggal_kadaluarsa)
 
     def tambahdata(self):
         connection.execute(
-            f"insert into barang (barcode,nama_barang,stok,harga_jual,harga_beli,tanggal_pembayaran) values('{self.barcode}','{self.nama_barang}','{self.stok}','{self.harga_jual}','{self.harga_beli}','{self.tanggal_pembayaran}')")
+            f"insert into barang (barcode,nama_barang,stok,harga_jual,harga_beli,tanggal_pembayaran,tanggal_kadaluarsa) values('{self.barcode}','{self.nama_barang}','{self.stok}','{self.harga_jual}','{self.harga_beli}','{self.tanggal_pembayaran}','{self.tanggal_kadaluarsa}')")
         connection.commit()
 
     @staticmethod
@@ -409,8 +410,18 @@ while True:
                             in_HgJual = input("Harga Jual : ")
                             in_HgBeli = input("Harga Beli : ")
                             in_TglBayar = input("Tanggal Pembayaran : ")
+                            print("""
+                            Tipe :
+                            1. Makanan
+                            2. Barang
+                            """)
+                            tipe = input("Input tipe :")
+                            if tipe == "1":
+                                tgl_exp = input("Tanggal Kadluarsa : ")
+                            elif tipe == "2":
+                                tgl_exp = None
                             Tambah = kelolaBarang(
-                                in_barcode, in_nama_barang, in_stok, in_HgJual, in_HgBeli, in_TglBayar)
+                                in_barcode, in_nama_barang, in_stok, in_HgJual, in_HgBeli, in_TglBayar, tgl_exp)
                             Tambah.tambahdata()
                             kelolaBarang.LihatSemuaBarang()
 
